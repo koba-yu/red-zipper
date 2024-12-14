@@ -26,7 +26,7 @@ eocd: object [
 	zipcomment-length:	le/take-to-int eocd-bin* 2
 ]
 eocd: make eocd [
-	zipcomment:			if zipcomment: take/part eocd-bin* eocd/zipcomment-length [to-string zipcomment]
+	zipcomment: if zipcomment: take/part eocd-bin* eocd/zipcomment-length [to-string zipcomment]
 ]
 
 file-entries: collect [foreach feb fe-bins [
