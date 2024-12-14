@@ -68,7 +68,6 @@ view compose [
 		unless dir? to-red-file file-entries/:i/file-name [
 			switch suffix? file-entries/:i/file-name [
 				%.txt [
-					content/image:
 					content/text: to-string file-entries/:i/binary
 				]
 				%.png [
