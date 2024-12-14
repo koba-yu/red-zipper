@@ -1,4 +1,9 @@
-red []
+red  [
+	Title:   "Sample Red implementation to decode zip file"
+	Author:  "Koba-yu"
+	File: 	 %red-zipper.red
+	Tabs:	 4
+]
 
 b: read/binary file: request-file
 
