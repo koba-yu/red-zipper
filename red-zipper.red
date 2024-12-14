@@ -1,6 +1,6 @@
 red []
 
-b: read/binary request-file
+b: read/binary file: request-file
 
 fe-bins: parse b [collect [any [
 			; file entry
@@ -53,7 +53,9 @@ file-entries: collect [foreach feb fe-bins [
 
 entries: collect [foreach file-entry file-entries [keep file-entry/file-name]]
 
-view [
+view compose [
+	text (rejoin ["Loaded zip file: " form file]) return
+	text "Contents of the zip" return
 	l: text-list data entries on-change [
 		content/text: none
 		content/image: none
