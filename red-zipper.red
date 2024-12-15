@@ -67,13 +67,16 @@ view compose [
 		content/image: none
 		i: l/selected
 		unless dir? to-red-file file-entries/:i/file-name [
+
+			db: either file-entries/:i/compression-method = 8 [
+				decompress file-entries/:i/binary 'deflate
+			][
+				file-entries/:i/binary
+			]
+
 			switch suffix? file-entries/:i/file-name [
-				%.txt [
-					content/text: to-string file-entries/:i/binary
-				]
-				%.png [
-					content/image: load/as file-entries/:i/binary 'png
-				]
+				%.txt [content/text: to-string db]
+				%.png [content/image: load/as db 'png]
 			]
 		]
 	]
