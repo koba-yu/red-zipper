@@ -1,8 +1,9 @@
-red  [
-	Title:   "Sample Red implementation to decode zip file"
-	Author:  "Koba-yu"
-	File: 	 %red-zipper.red
-	Tabs:	 4
+Red  [
+	Title:	"Sample Red implementation to decode zip file"
+	Needs:	'view
+	Author:	"Koba-yu"
+	File:	%red-zipper.red
+	Tabs:	4
 ]
 
 b: read/binary file: request-file
@@ -59,7 +60,7 @@ file-entries: collect [foreach feb fe-bins [
 entries: collect [foreach file-entry file-entries [keep file-entry/file-name]]
 
 view compose [
-	text (rejoin ["Loaded zip file: " last split form file "/"]) return
+	text (rejoin ["Loaded zip file: " last split-path file]) return
 	text "Contents of the zip" return
 	l: text-list data entries on-change [
 		content/text: none
