@@ -88,17 +88,24 @@ view compose [
 
 	; エントリのリスト。選択時のイベントでコンテンツ表示用の face（content）の値をセットしている
 	l: text-list data entries on-change [
+
+		; 表示系のプロパティの初期化
 		content/text: none
 		content/image: none
 		i: l/selected
+
 		unless dir? to-red-file file-entries/:i/file-name [
 
+			; compression-methodが8の場合、deflate圧縮されているので、decompressで展開する
+			; それ以外の場合は一旦そのままのバイナリを返す
+			; ※今のところdeflateと非圧縮以外は非対応
 			db: either file-entries/:i/compression-method = 8 [
 				decompress file-entries/:i/binary 'deflate
 			][
 				file-entries/:i/binary
 			]
 
+			; 一旦はファイル拡張子を見て処理内容を判断
 			switch suffix? file-entries/:i/file-name [
 				%.txt [content/text: to-string db]
 				%.png [content/image: load/as db 'png]
