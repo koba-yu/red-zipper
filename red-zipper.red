@@ -6,30 +6,32 @@ Red  [
 	Tabs:	4
 ]
 
-; ファイル選択ダイアログを表示し、選択されたファイルをバイナリデータとして読み込み
+; Open the file selection dialog and read the file as binary data.
 b: read/binary file: request-file
 
 fe-bins: parse b [collect [any [
-			; file entry
-			; ファイルエントリの先頭 #{504B0304} から次のファイルエントリの直前またはセントラルディレクトリの直前 #{504b0102} の間を feb にセット
-			; keepされた feb はblockになって fe-bins に返される
+			; [file entry]
+			; Pick binaries from the beginning signature of the file entry #{504B0304} to just before the next file entry
+			; or central directory signature #{504b0102} and set it on 'feb.
+			; "keep" makes a block of 'feb values and returns it to 'fe-bins.
 			thru #{504B0304} copy feb to [#{504B0304} | #{504b0102}] keep (feb)
-			; central directory
-			; セントラルディレクトリの先頭から終端レコードの開始位置 #{504b0506} までを cdi に、そこから末端までを eocd-bin にセット
+			; [central directory]
+			; Pick binaries from the beginning signature of the central directory to the ending signature of the central directory
+			; and set it on 'cdi, and set binaries after the ending signature on 'eocd-bin.
 			| thru #{504b0102} copy cdi thru #{504b0506} copy eocd-bin thru end
 		]
 	]
 ]
 
-; 後続処理でZIP仕様に従って固定サイズで分割していく
-; リトルエンディアンのバイナリなのでreverseしてからintegerにするための関数
+; The subsequent process divides the data in fixed size according to the ZIP specification.
+; Defining the function to reverse a little-endian binary and then convert it to an integer.
 le: context [take-to-int: func [bin [binary!] size [integer!]][to-integer reverse take/part bin size]]
 
-; 後続処理が破壊的変更なので、元データは取っておく
-; （これはやらなくても動きはする）
+; Keep the original data because the subsequent process is a destructive change.
+; This is not a mandatory implementation but is done for clarity when debugging.
 eocd-bin*: copy eocd-bin
 
-; ZIPの仕様に従ってフィールドにセットしていく
+; Set values on each field, according to the ZIP specification.
 eocd: object [
 	disk-num:			le/take-to-int eocd-bin* 2
 	cdi-num:			le/take-to-int eocd-bin* 2
@@ -40,20 +42,20 @@ eocd: object [
 	zipcomment-length:	le/take-to-int eocd-bin* 2
 ]
 
-; 作成済みのオブジェクトにフィールド追加
-; zipcomment-lengthを使わないといけないので、上とは別に処理している
+; Add a field on the eocd object.
+; eocd/zipcomment-length is required to make the zipcomment field. That's why I need to define the zipcomment field separately.
 eocd: make eocd [
 	zipcomment: if zipcomment: take/part eocd-bin* eocd/zipcomment-length [to-string zipcomment]
 ]
 
-; 取得した fe-bins をループ処理
+; Loop through values of 'fe-bins.
 file-entries: collect [foreach feb fe-bins [
 
-		; 後続処理が破壊的変更なので、元データは取っておく
-		; （これはやらなくても動きはする）
+		; Keep the original data because the subsequent process is a destructive change.
+		; This is not a mandatory implementation but is done for clarity when debugging.
 		feb*: copy feb
 
-		; ZIPの仕様に従ってフィールドにセットしていく
+		; Set values on each field, according to the ZIP specification.
 		o: object [
 			version-extract:	le/take-to-int feb* 2
 			general-flag:		take/part feb* 2
@@ -67,8 +69,8 @@ file-entries: collect [foreach feb fe-bins [
 			extra-field-length:	le/take-to-int feb* 2
 		]
 
-		; 作成済みのオブジェクトにフィールド追加
-		; 作成済みのフィールドの値を使って処理しないといけないので、上とは別に処理している
+		; Add a field on the eocd object.
+		; The values of the field defined above are required to make these field. That's why I need to define these fields separately.
 		keep make o [
 			file-name:		to-string take/part feb* o/file-name-length
 			extra-field: 	take/part feb* o/extra-field-length
@@ -77,41 +79,42 @@ file-entries: collect [foreach feb fe-bins [
 	]
 ]
 
-; オブジェクトの block からファイル名の block に変換
+; Convert the object block to the file name block.
 entries: collect [foreach file-entry file-entries [keep file-entry/file-name]]
 
-; 処理結果の表示用のViewを作成
+; Make a view to display the processing results.
 view compose [
-	; 読み込みしたZIPファイルのファイル名表示
+	; Text of the file name that is read.
 	text (rejoin ["Loaded zip file: " last split-path file]) return
 	text "Contents of the zip" return
 
-	; エントリのリスト。選択時のイベントでコンテンツ表示用の face（content）の値をセットしている
+	; The list of entries. I set the values to the face 'content that is defined to show the contents of the ZIP.
 	l: text-list data entries on-change [
 
-		; 表示系のプロパティの初期化
+		; Clear properties related to show the content.
 		content/text: none
 		content/image: none
 		i: l/selected
 
 		unless dir? to-red-file file-entries/:i/file-name [
 
-			; compression-methodが8の場合、deflate圧縮されているので、decompressで展開する
-			; それ以外の場合は一旦そのままのバイナリを返す
-			; ※今のところdeflateと非圧縮以外は非対応
+			; If the compression-method is 8, the content is compressed by deflate so needed to decompress.
+			; Otherwise, the binary is returned as-is.
+			; So far, I implemented the code for non-compressed and deflate compressed.
 			db: either file-entries/:i/compression-method = 8 [
 				decompress file-entries/:i/binary 'deflate
 			][
 				file-entries/:i/binary
 			]
 
-			; 一旦はファイル拡張子を見て処理内容を判断
+			; Switch how to make the value by checking the extension of the file, so far.
 			switch suffix? file-entries/:i/file-name [
 				%.txt [content/text: to-string db]
 				%.png [content/image: load/as db 'png]
 			]
 		]
 	]
-	; コンテンツ表示用のface
+
+	; The face to show the content.
 	content: base 300x300
 ]
