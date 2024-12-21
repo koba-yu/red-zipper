@@ -81,13 +81,13 @@ file-entries: collect [foreach feb fe-bins [
 
 		hours: util/bits-to-int hours*
 		minutes: util/bits-to-int minutes*
-		seconds: (util/bits-to-int seconds*) * 2
+		seconds: (util/bits-to-int seconds*) * 2 ; ZIP holds 1/2 precision for seconds only. Therefore we need to double the value.
 
 		day*: enbase/base reverse take/part feb* 2 2
 		year*: take/part day* 7
 		month*: take/part day* 4 ; The remainder is day.
 
-		year: (util/bits-to-int year*) + 1980
+		year: (util/bits-to-int year*) + 1980 ; The year field in the ZIP holds the number of years back based on 1980.
 		month: util/bits-to-int month*
 		day: util/bits-to-int day*
 
