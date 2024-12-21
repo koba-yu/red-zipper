@@ -79,17 +79,17 @@ file-entries: collect [foreach feb fe-bins [
 		; ZIP's last modified time holds the value as bit below;
 		; NNNNN----------- => 0 - 23 [hour]
 		; -----NNNNNN----- => 0 - 59 [month]
-		; -----------NNNNN => 0 - 29 [second by 1/2 precision]
+		; -----------NNNNN => 0 - 29 [second by 2 second precision]
 		seconds*: enbase/base reverse take/part feb* 2 2
 		hours*: take/part seconds* 5
 		minutes*: take/part seconds* 6 ; The remainder is second.
 
 		hours: util/bits-to-int hours*
 		minutes: util/bits-to-int minutes*
-		seconds: (util/bits-to-int seconds*) * 2 ; In ZIP, seconds are held to only 1/2 precision. Therefore we need to double the value.
+		seconds: (util/bits-to-int seconds*) * 2 ; In ZIP, seconds are held to only 2 second precision. Therefore we need to double the value.
 
 		; ZIP's last modified date holds the value as bit below;
-		; NNNNNNN--------- => 0 -    [+ 1980] the number of years back based on 1980
+		; NNNNNNN--------- => 0 -    [+ 1980] year value related to 1980
 		; -------NNNN----- => 1 - 12 [month]
 		; -----------NNNNN => 1 - 31 [day]
 		day*: enbase/base reverse take/part feb* 2 2
