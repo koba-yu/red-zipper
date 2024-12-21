@@ -60,8 +60,27 @@ file-entries: collect [foreach feb fe-bins [
 			version-extract:	le/take-to-int feb* 2
 			general-flag:		take/part feb* 2
 			compression-method:	le/take-to-int feb* 2
-			last-modified-time:	le/take-to-int feb* 2
-			last-modified-date:	le/take-to-int feb* 2
+		]
+
+		seconds*: enbase/base reverse take/part feb* 2 2
+		hours*: take/part seconds* 5
+		minutes*: take/part seconds* 6 ; The remainder is second.
+
+		hours: to-integer debase/base pad/left/with hours* 8 #"0" 2
+		minutes: to-integer debase/base pad/left/with minutes* 8 #"0" 2
+		seconds: (to-integer debase/base pad/left/with seconds* 8 #"0" 2) * 2
+
+		day*: enbase/base reverse take/part feb* 2 2
+		year*: take/part day* 7
+		month*: take/part day* 4 ; The remainder is day.
+
+		year: (to-integer debase/base pad/left/with year* 8 #"0" 2) + 1980
+		month: to-integer debase/base pad/left/with month* 8 #"0" 2
+		day: to-integer debase/base pad/left/with day* 8 #"0" 2
+
+		; Add the last-modified time field on the current object and subsequent fields.
+		o: make o [
+			last-modified:		make date! reduce [day month year hours minutes seconds]
 			crc-32:				enbase/base to-binary le/take-to-int feb* 4 16
 			compressed-size:	le/take-to-int feb* 4
 			uncompressed-size:	le/take-to-int feb* 4
