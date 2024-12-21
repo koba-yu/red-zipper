@@ -24,8 +24,21 @@ fe-bins: parse b [collect [any [
 ]
 
 ; The subsequent process divides the data in fixed size according to the ZIP specification.
-; Defining the function to reverse a little-endian binary and then convert it to an integer.
-le: context [take-to-int: func [bin [binary!] size [integer!]][to-integer reverse take/part bin size]]
+; Defining the function to be used later.
+util: context [
+	take-to-int: func [
+		; reverse a little-endian binary and then convert it to an integer by the given size.
+		bin [binary!] size [integer!]
+	][
+		to-integer reverse take/part bin size
+	]
+	bits-to-int: func [
+		; convert the binary bit string to integer value.
+		bits [string!]
+	][
+		to-integer debase/base pad/left/with bits 8 #"0" 2
+	]
+]
 
 ; Keep the original data because the subsequent process is a destructive change.
 ; This is not a mandatory implementation but is done for clarity when debugging.
@@ -33,13 +46,13 @@ eocd-bin*: copy eocd-bin
 
 ; Set values on each field, according to the ZIP specification.
 eocd: object [
-	disk-num:			le/take-to-int eocd-bin* 2
-	cdi-num:			le/take-to-int eocd-bin* 2
-	total-num-disk:		le/take-to-int eocd-bin* 2
-	total-num-cdi:		le/take-to-int eocd-bin* 2
-	cdi-size:			le/take-to-int eocd-bin* 4
-	offset-cdi:			le/take-to-int eocd-bin* 4
-	zipcomment-length:	le/take-to-int eocd-bin* 2
+	disk-num:			util/take-to-int eocd-bin* 2
+	cdi-num:			util/take-to-int eocd-bin* 2
+	total-num-disk:		util/take-to-int eocd-bin* 2
+	total-num-cdi:		util/take-to-int eocd-bin* 2
+	cdi-size:			util/take-to-int eocd-bin* 4
+	offset-cdi:			util/take-to-int eocd-bin* 4
+	zipcomment-length:	util/take-to-int eocd-bin* 2
 ]
 
 ; Add a field on the eocd object.
@@ -57,35 +70,35 @@ file-entries: collect [foreach feb fe-bins [
 
 		; Set values on each field, according to the ZIP specification.
 		o: object [
-			version-extract:	le/take-to-int feb* 2
+			version-extract:	util/take-to-int feb* 2
 			general-flag:		take/part feb* 2
-			compression-method:	le/take-to-int feb* 2
+			compression-method:	util/take-to-int feb* 2
 		]
 
 		seconds*: enbase/base reverse take/part feb* 2 2
 		hours*: take/part seconds* 5
 		minutes*: take/part seconds* 6 ; The remainder is second.
 
-		hours: to-integer debase/base pad/left/with hours* 8 #"0" 2
-		minutes: to-integer debase/base pad/left/with minutes* 8 #"0" 2
-		seconds: (to-integer debase/base pad/left/with seconds* 8 #"0" 2) * 2
+		hours: util/bits-to-int hours*
+		minutes: util/bits-to-int minutes*
+		seconds: (util/bits-to-int seconds*) * 2
 
 		day*: enbase/base reverse take/part feb* 2 2
 		year*: take/part day* 7
 		month*: take/part day* 4 ; The remainder is day.
 
-		year: (to-integer debase/base pad/left/with year* 8 #"0" 2) + 1980
-		month: to-integer debase/base pad/left/with month* 8 #"0" 2
-		day: to-integer debase/base pad/left/with day* 8 #"0" 2
+		year: (util/bits-to-int year*) + 1980
+		month: util/bits-to-int month*
+		day: util/bits-to-int day*
 
 		; Add the last-modified time field on the current object and subsequent fields.
 		o: make o [
 			last-modified:		make date! reduce [day month year hours minutes seconds]
-			crc-32:				enbase/base to-binary le/take-to-int feb* 4 16
-			compressed-size:	le/take-to-int feb* 4
-			uncompressed-size:	le/take-to-int feb* 4
-			file-name-length:	le/take-to-int feb* 2
-			extra-field-length:	le/take-to-int feb* 2
+			crc-32:				enbase/base to-binary util/take-to-int feb* 4 16
+			compressed-size:	util/take-to-int feb* 4
+			uncompressed-size:	util/take-to-int feb* 4
+			file-name-length:	util/take-to-int feb* 2
+			extra-field-length:	util/take-to-int feb* 2
 		]
 
 		; Add a field on the eocd object.
