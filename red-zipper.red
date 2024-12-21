@@ -27,7 +27,7 @@ fe-bins: parse b [collect [any [
 ; Defining the function to be used later.
 util: context [
 	take-to-int: func [
-		; reverse a little-endian binary and then convert it to an integer by the given size.
+		; Take the binary by the given size, reverse it since it is little-endian, and convert it to an integer.
 		bin [binary!] size [integer!]
 	][
 		to-integer reverse take/part bin size
